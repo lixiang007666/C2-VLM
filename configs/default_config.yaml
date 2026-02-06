@@ -1,0 +1,103 @@
+# Default configuration for C2-VLM training
+
+# Model configuration
+model:
+  vision_encoder:
+    model_name: "vit_base_patch16_224"
+    pretrained: true
+    img_size: 224
+    patch_size: 16
+    embed_dim: 768
+    freeze_backbone: false
+    use_cls_token: true
+    
+  text_encoder:
+    model_name: "bert-base-uncased"
+    max_length: 77
+    embed_dim: 768
+    freeze_backbone: false
+    use_pooler_output: false
+    pooling_strategy: "cls"
+    
+  fusion_module:
+    hidden_dim: 512
+    projection_dim: 512
+    num_attention_heads: 8
+    dropout: 0.1
+    temperature: 0.07
+    use_cross_attention: true
+
+# Training configuration
+training:
+  batch_size: 32
+  learning_rate: 1e-4
+  weight_decay: 0.01
+  num_epochs: 50
+  warmup_steps: 1000
+  gradient_clip_value: 1.0
+  mixed_precision: true
+  
+  # Optimizer
+  optimizer:
+    type: "adamw"
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    
+  # Scheduler
+  scheduler:
+    type: "cosine"
+    eta_min: 1e-6
+    
+  # Loss weights
+  loss_weights:
+    contrastive: 1.0
+
+# Data configuration
+data:
+  dataset_name: "coco"
+  data_root: "./data"
+  image_size: 224
+  text_max_length: 77
+  num_workers: 4
+  pin_memory: true
+  
+  # Data augmentation
+  augmentation:
+    random_crop: true
+    random_flip: true
+    color_jitter: true
+    normalize: true
+    
+  # Dataset splits
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+
+# Evaluation configuration
+evaluation:
+  metrics: ["retrieval_recall", "retrieval_precision", "retrieval_f1"]
+  recall_k: [1, 5, 10]
+  eval_frequency: 1  # epochs
+  save_best_model: true
+
+# Logging configuration
+logging:
+  log_dir: "./logs"
+  experiment_name: "c2_vlm_default"
+  log_frequency: 100  # steps
+  use_wandb: false
+  wandb_project: "c2-vlm"
+  
+# Checkpointing
+checkpointing:
+  save_dir: "./checkpoints"
+  save_frequency: 5  # epochs
+  keep_last_k: 3
+  save_best: true
+
+# Hardware configuration
+hardware:
+  device: "cuda"
+  num_gpus: 1
+  distributed: false
+  fp16: true
