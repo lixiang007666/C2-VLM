@@ -1,32 +1,18 @@
-# Core dependencies
-torch>=1.12.0
-torchvision>=0.13.0
-transformers>=4.20.0
-numpy>=1.21.0
-pillow>=8.3.0
-
-# Data processing
-datasets>=2.0.0
-opencv-python>=4.5.0
-albumentations>=1.2.0
-
-# Training and evaluation
-tensorboard>=2.9.0
-wandb>=0.12.0
-tqdm>=4.64.0
-scikit-learn>=1.1.0
-
-# Configuration and utilities
-omegaconf>=2.2.0
-hydra-core>=1.2.0
-einops>=0.4.0
-timm>=0.6.0
-
-# Optional: For distributed training
-deepspeed>=0.7.0
-
-# Development dependencies
-pytest>=7.0.0
-black>=22.0.0
-flake8>=4.0.0
-isort>=5.10.0
+torch==2.4.1
+torchvision==0.19.1
+numpy==1.26.4
+scipy==1.14.1
+pandas==2.2.3
+matplotlib==3.9.4
+opencv-python-headless==4.10.0.84
+albumentations==1.4.24
+nibabel==5.3.2
+scikit-image==0.24.0
+open_clip_torch==2.23.0
+transformers==4.35.2
+huggingface_hub==0.25.2
+safetensors==0.4.5
+thop==0.1.1.post2209072238
+torchsummary==1.5.1
+tensorboard==2.18.0
+icecream==2.1.3

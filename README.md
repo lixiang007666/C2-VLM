@@ -1,128 +1,135 @@
-# C2-VLM: Contextual Contrastive Vision-Language Model
+# C2-VLM
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+> **Guiding by Semantics, Seeing from Coarse to Fine: An Adaptive Vision-Language Model for Cardio-Cerebrovascular Segmentation**
 
-## Overview
+C2-VLM is a unified segmentation framework for cardiovascular CTA and cerebrovascular MRA. It couples domain-adaptive visual representation with morphology-aware language guidance, allowing a single model to resolve modality shift, cross-organ vascular variation, and the severe scale imbalance between major trunks and distal branches.
 
-C2-VLM (Contextual Contrastive Vision-Language Model) is a state-of-the-art multimodal model that leverages contextual understanding and contrastive learning to bridge the gap between visual and textual representations. This repository contains the official implementation of the C2-VLM paper.
+## Framework
 
-## Features
+- **Visual Copilot.** A SAM ViT-B encoder is adapted with low-rank residual updates, while a parallel CLIP-ResNet50 pathway restores local texture and boundary cues that are attenuated by global self-attention.
+- **Cross-scale Expert Mixing.** Intermediate encoder states are aligned and routed through an expert-choice Mixture-of-Experts block, enabling dynamic reuse of shallow geometric detail and deep semantic context.
+- **Language Copilot.** BiomedCLIP encodes a morphology-focused prompt bank; attention aggregation contracts this bank into an input-compatible semantic prior and injects it into multi-scale visual features.
+- **Non-Promptable Decoding.** The prediction head produces vessel masks without interactive points, boxes, or masks at inference time.
+- **Topology-Aware Optimization.** Binary cross-entropy is coupled with soft clDice to balance voxel accuracy and vascular continuity.
 
-- **Contextual Understanding**: Advanced context-aware vision-language alignment
-- **Contrastive Learning**: Robust representation learning through contrastive objectives
-- **Multimodal Fusion**: Effective integration of visual and textual modalities
-- **Flexible Architecture**: Modular design supporting various downstream tasks
+The paper-aligned configuration uses SAM ViT-B, LoRA rank 4 with alpha 16, three experts with a top-k capacity factor of 2, BiomedCLIP text features, 1024 x 1024 axial slices, and a topology-loss weight of 0.8.
 
-## Architecture
+## Environment
 
-C2-VLM consists of three main components:
-1. **Vision Encoder**: Processes visual inputs and extracts meaningful features
-2. **Text Encoder**: Encodes textual information with contextual understanding
-3. **Multimodal Fusion Module**: Aligns and fuses vision-language representations
+- Python 3.10
+- PyTorch 2.4.1
+- CUDA-capable GPU
 
-## Installation
-
-### Prerequisites
-- Python >= 3.8
-- PyTorch >= 1.12.0
-- CUDA >= 11.3 (for GPU acceleration)
-
-### Setup
 ```bash
-# Clone the repository
-git clone https://github.com/lixiang007666/C2-VLM.git
-cd C2-VLM
-
-# Install dependencies
+conda create -n c2vlm python=3.10 -y
+conda activate c2vlm
 pip install -r requirements.txt
-
-# Install the package in development mode
-pip install -e .
 ```
 
-## Quick Start
+## Model Assets
 
-### Training
+Training and inference require a SAM ViT-B checkpoint and a cached BiomedCLIP prompt bank. Checkpoints and generated embeddings are intentionally not stored in this repository.
+
 ```bash
-# Basic training with default configuration
-python scripts/train.py --config configs/default_config.yaml
-
-# Custom training
-python scripts/train.py --config configs/custom_config.yaml --gpu 0,1
+python prepare_prompt_cache.py \
+  --model-dir /path/to/BiomedCLIP \
+  --biomedbert-config-dir /path/to/BiomedBERT \
+  --output weights/biomedclip_prompt_bank.pt
 ```
 
-### Evaluation
+## Data Interface
+
+The public cerebrovascular portion of [C2-SegDB](https://huggingface.co/datasets/lixiangcog/C2-SegDB) follows this layout:
+
+```text
+data/C2-SegDB/
+├── images/
+│   ├── aneurysm/
+│   └── control/
+└── labels/
+    ├── aneurysm/
+    └── control/
+```
+
+Volumes are split at case level with group stratification. By default, training indexes vessel-containing axial slices; pass `--include-empty` to traverse each complete volume.
+
+## Training
+
 ```bash
-# Evaluate on standard benchmarks
-python scripts/evaluate.py --model_path checkpoints/best_model.pth --dataset coco
-
-# Zero-shot evaluation
-python scripts/zero_shot_eval.py --model_path checkpoints/best_model.pth
+python train_c2vlm.py \
+  --data-root data/C2-SegDB \
+  --sam-checkpoint weights/sam_vit_b_01ec64.pth \
+  --prompt-embeddings weights/biomedclip_prompt_bank.pt \
+  --output-dir runs/c2segdb \
+  --epochs 100 \
+  --image-size 1024 \
+  --learning-rate 1e-3 \
+  --warmup-start 1e-5 \
+  --lora-rank 4 \
+  --lora-alpha 16 \
+  --experts 3 \
+  --top-k 2 \
+  --topology-weight 0.8 \
+  --include-empty
 ```
 
-### Inference
+`train.sh` exposes the same entry point. Runtime paths can be overridden with `DATA_ROOT`, `SAM_CHECKPOINT`, `PROMPT_EMBEDDINGS`, `OUTPUT_DIR`, and `PYTHON_BIN`.
+
+## Inference
+
+`infer_c2vlm.py` performs prompt-free, slice-wise inference on a NIfTI volume or recursively on a directory of NIfTI volumes. Predictions retain the source affine, header geometry, and volume dimensions.
+
 ```bash
-# Single image-text pair inference
-python scripts/inference.py --image path/to/image.jpg --text "description of the image"
+python infer_c2vlm.py \
+  --input /path/to/input_volume_or_directory \
+  --output-dir predictions \
+  --checkpoint /path/to/latest.pt \
+  --sam-checkpoint /path/to/sam_vit_b_01ec64.pth \
+  --prompt-embeddings /path/to/biomedclip_prompt_bank.pt \
+  --threshold 0.5 \
+  --image-size 1024 \
+  --batch-size 1
 ```
 
-## Model Zoo
+The inference architecture is reconstructed from the training arguments stored in `latest.pt`. Explicit architecture flags may be supplied when loading a checkpoint that does not contain its training configuration.
 
-| Model | Dataset | Accuracy | Download |
-|-------|---------|----------|----------|
-| C2-VLM-Base | COCO | 85.2% | [Link](https://github.com/lixiang007666/C2-VLM/releases) |
-| C2-VLM-Large | COCO | 87.9% | [Link](https://github.com/lixiang007666/C2-VLM/releases) |
+## Datasets Used in the Paper
 
-## Datasets
+| Dataset | Split | Modality | Access |
+|---|---:|---:|---|
+| COSTA-IXI-Guys | Train | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| COSTA-IXI-HH | Train | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| COSTA-IXI-IOP | Train | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| COSTA-ADAM | Train | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| TopCoW-MRA | Train | MRA | [TopCoW 2024 data](https://topcow24.grand-challenge.org/data/) |
+| TubeTK-T1-MRA | Train | T1 / MRA | [TubeTK data](https://public.kitware.com/Wiki/TubeTK/Data) |
+| SMILE-UHURA | Train | 7T TOF-MRA | [Synapse](https://www.synapse.org/Synapse:syn47164761/wiki/620033) |
+| CereVessMRA-CN | Train | TOF-MRA | [Science Data Bank](https://doi.org/10.57760/sciencedb.13880) |
+| ImageCAS (train partition) | Train | Coronary CTA | [Official repository](https://github.com/XiaoweiXu/ImageCAS-A-Large-Scale-Dataset-and-Benchmark-for-Coronary-Artery-Segmentation-based-on-CT) |
+| COSTA-ICBM | Test | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| COSTA-LocH1 | Test | TOF-MRA | [COSTA portal](https://imed.nimte.ac.cn/costa.html) / [Zenodo](https://zenodo.org/records/10957925) |
+| ImageCAS (test partition) | Test | Coronary CTA | [Official repository](https://github.com/XiaoweiXu/ImageCAS-A-Large-Scale-Dataset-and-Benchmark-for-Coronary-Artery-Segmentation-based-on-CT) |
+| ASOCA | Test | Coronary CTA | [Challenge portal](https://asoca.grand-challenge.org/) |
+| C2-SegDB-CBV | External validation | TOF-MRA | [Hugging Face](https://huggingface.co/datasets/lixiangcog/C2-SegDB) |
+| C2-SegDB-CV | External validation | Coronary CTA | Not publicly released because of data-sharing constraints |
 
-The model supports training and evaluation on various datasets:
-- COCO Captions
-- Flickr30K
-- Visual Genome
-- Conceptual Captions
+Access to some challenge datasets requires registration and acceptance of the provider's terms.
 
-See [docs/datasets.md](docs/datasets.md) for detailed dataset preparation instructions.
+## Compared Methods
 
-## Results
-
-Our model achieves state-of-the-art performance on several benchmarks:
-
-| Task | Dataset | Metric | Score |
-|------|---------|--------|-------|
-| Image-Text Retrieval | COCO | R@1 | 85.2% |
-| Image-Text Retrieval | Flickr30K | R@1 | 78.9% |
-| Visual Question Answering | VQA v2.0 | Accuracy | 76.4% |
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Citation
-
-If you use C2-VLM in your research, please cite:
-
-```bibtex
-@article{li2025c2vlm,
-  title={C2-VLM: Contextual Contrastive Vision-Language Model},
-  author={Li, Xiang and others},
-  journal={arXiv preprint arXiv:2025.xxxxx},
-  year={2025}
-}
-```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Thanks to the PyTorch team for the excellent framework
-- Special thanks to the vision-language research community
-- Built upon foundations laid by CLIP, ALIGN, and other pioneering works
-
-## Contact
-
-For questions and support, please contact:
-- Xiang Li: [lixiang007666@gmail.com](mailto:lixiang007666@gmail.com)
-- GitHub Issues: [Issues Page](https://github.com/lixiang007666/C2-VLM/issues)
+| Method | Reference implementation or paper |
+|---|---|
+| U-Net | [Paper](https://arxiv.org/abs/1505.04597) |
+| 3D U-Net | [Paper](https://arxiv.org/abs/1606.06650) |
+| SegFormer-B5 | [Official code](https://github.com/NVlabs/SegFormer) |
+| nnU-Net ResEnc-L | [Official code](https://github.com/MIC-DKFZ/nnUNet) |
+| SwinUNETR | [Official code](https://github.com/Project-MONAI/research-contributions/tree/main/SwinUNETR) |
+| U-Mamba | [Official code](https://github.com/bowang-lab/U-Mamba) |
+| DSCNet | [Official code](https://github.com/yaoleiqi/DSCNet) |
+| vesselFM FT | [Official code](https://github.com/bwittmann/vesselFM) |
+| SyncSAM | [Official code](https://github.com/Hhankyangg/SyncSAM) |
+| Dino U-Net | [Official code](https://github.com/yifangao112/DinoUNet) |
+| CESAR | [Official code](https://github.com/iMED-Lab/COSTA) |
+| EI-Seg | [Official code](https://github.com/USTB-MEDAI/EI-Seg) |
+| GBCNN | [Paper](https://doi.org/10.1109/TMI.2024.3435714) |
+| ACE-ProtoNet | [Official code](https://github.com/d1c2x3/ACE-ProtoNet) |
