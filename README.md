@@ -12,7 +12,6 @@ C2-VLM is a unified segmentation framework for cardiovascular CTA and cerebrovas
 - **Non-Promptable Decoding.** The prediction head produces vessel masks without interactive points, boxes, or masks at inference time.
 - **Topology-Aware Optimization.** Binary cross-entropy is coupled with soft clDice to balance voxel accuracy and vascular continuity.
 
-The paper-aligned configuration uses SAM ViT-B, LoRA rank 4 with alpha 16, three experts with a top-k capacity factor of 2, BiomedCLIP text features, 1024 x 1024 axial slices, and a topology-loss weight of 0.8.
 
 ## Environment
 
@@ -28,7 +27,6 @@ pip install -r requirements.txt
 
 ## Model Assets
 
-Training and inference require a SAM ViT-B checkpoint and a cached BiomedCLIP prompt bank.
 
 ```bash
 python prepare_prompt_cache.py \
@@ -73,7 +71,6 @@ python train_c2vlm.py \
   --include-empty
 ```
 
-`train.sh` exposes the same entry point. Runtime paths can be overridden with `DATA_ROOT`, `SAM_CHECKPOINT`, `PROMPT_EMBEDDINGS`, `OUTPUT_DIR`, and `PYTHON_BIN`.
 
 ## Inference
 
