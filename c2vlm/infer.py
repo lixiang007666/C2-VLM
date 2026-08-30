@@ -11,7 +11,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-from c2vlm_model import C2VLM
+from .model import C2VLM
 
 
 def parse_args() -> argparse.Namespace:

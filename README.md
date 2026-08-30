@@ -14,6 +14,23 @@ C2-VLM is a unified segmentation framework for cardiovascular CTA and cerebrovas
 
 The paper-aligned configuration uses SAM ViT-B, LoRA rank 4 with alpha 16, three experts with a top-k capacity factor of 2, BiomedCLIP text features, 1024 x 1024 axial slices, and a topology-loss weight of 0.8.
 
+## Repository Layout
+
+```text
+C2-VLM/
+├── c2vlm/
+│   ├── data.py              # C2-SegDB loading and case-level splitting
+│   ├── model.py             # Visual Copilot, Language Copilot, MoE, decoder
+│   ├── losses.py            # BCE and soft-clDice objective
+│   ├── train.py             # training and validation entry point
+│   ├── infer.py             # NIfTI inference entry point
+│   ├── prepare_prompts.py   # BiomedCLIP prompt cache builder
+│   └── segment_anything/    # SAM ViT implementation
+├── scripts/train.sh         # paper-aligned training launcher
+├── legacy/                  # previous training pipeline
+└── requirements.txt
+```
+
 ## Environment
 
 - Python 3.10
@@ -31,7 +48,7 @@ pip install -r requirements.txt
 Training and inference require a SAM ViT-B checkpoint and a cached BiomedCLIP prompt bank. Checkpoints and generated embeddings are intentionally not stored in this repository.
 
 ```bash
-python prepare_prompt_cache.py \
+python -m c2vlm.prepare_prompts \
   --model-dir /path/to/BiomedCLIP \
   --biomedbert-config-dir /path/to/BiomedBERT \
   --output weights/biomedclip_prompt_bank.pt
@@ -56,7 +73,7 @@ Volumes are split at case level with group stratification. By default, training 
 ## Training
 
 ```bash
-python train_c2vlm.py \
+python -m c2vlm.train \
   --data-root data/C2-SegDB \
   --sam-checkpoint weights/sam_vit_b_01ec64.pth \
   --prompt-embeddings weights/biomedclip_prompt_bank.pt \
@@ -73,14 +90,14 @@ python train_c2vlm.py \
   --include-empty
 ```
 
-`train.sh` exposes the same entry point. Runtime paths can be overridden with `DATA_ROOT`, `SAM_CHECKPOINT`, `PROMPT_EMBEDDINGS`, `OUTPUT_DIR`, and `PYTHON_BIN`.
+`scripts/train.sh` exposes the same entry point. Runtime paths can be overridden with `DATA_ROOT`, `SAM_CHECKPOINT`, `PROMPT_EMBEDDINGS`, `OUTPUT_DIR`, and `PYTHON_BIN`.
 
 ## Inference
 
-`infer_c2vlm.py` performs prompt-free, slice-wise inference on a NIfTI volume or recursively on a directory of NIfTI volumes. Predictions retain the source affine, header geometry, and volume dimensions.
+`c2vlm.infer` performs prompt-free, slice-wise inference on a NIfTI volume or recursively on a directory of NIfTI volumes. Predictions retain the source affine, header geometry, and volume dimensions.
 
 ```bash
-python infer_c2vlm.py \
+python -m c2vlm.infer \
   --input /path/to/input_volume_or_directory \
   --output-dir predictions \
   --checkpoint /path/to/latest.pt \

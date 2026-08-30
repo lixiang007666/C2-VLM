@@ -11,7 +11,7 @@ from open_clip import create_model
 from torch import nn
 from torch.utils.checkpoint import checkpoint
 
-from segment_anything import sam_model_registry
+from .segment_anything import sam_model_registry
 
 
 class LoRAQKV(nn.Module):
