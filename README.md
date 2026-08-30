@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 ## Model Assets
 
-Training and inference require a SAM ViT-B checkpoint and a cached BiomedCLIP prompt bank. Checkpoints and generated embeddings are intentionally not stored in this repository.
+Training and inference require a SAM ViT-B checkpoint and a cached BiomedCLIP prompt bank.
 
 ```bash
 python prepare_prompt_cache.py \
@@ -91,7 +91,6 @@ python infer_c2vlm.py \
   --batch-size 1
 ```
 
-The inference architecture is reconstructed from the training arguments stored in `latest.pt`. Explicit architecture flags may be supplied when loading a checkpoint that does not contain its training configuration.
 
 ## Datasets Used in the Paper
 
