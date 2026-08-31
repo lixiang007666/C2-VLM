@@ -2,14 +2,16 @@
 set -euo pipefail
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
-PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 DATA_ROOT="${DATA_ROOT:-${PROJECT_DIR}/data/C2-SegDB}"
 SAM_CHECKPOINT="${SAM_CHECKPOINT:-${PROJECT_DIR}/weights/sam_vit_b_01ec64.pth}"
 PROMPT_EMBEDDINGS="${PROMPT_EMBEDDINGS:-${PROJECT_DIR}/weights/biomedclip_prompt_bank.pt}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_DIR}/runs/c2segdb}"
 
-"${PYTHON_BIN}" "${PROJECT_DIR}/train_c2vlm.py" \
+cd "${PROJECT_DIR}"
+"${PYTHON_BIN}" -m c2vlm.train \
   --data-root "${DATA_ROOT}" \
   --sam-checkpoint "${SAM_CHECKPOINT}" \
   --prompt-embeddings "${PROMPT_EMBEDDINGS}" \

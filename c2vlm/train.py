@@ -12,14 +12,14 @@ import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Sampler
 
-from c2segdb_dataset import (
+from .data import (
     C2SegDBSliceDataset,
     build_slice_records,
     discover_cases,
     split_case_ids,
 )
-from c2vlm_model import C2VLM
-from topology_loss import BCESoftClDiceLoss
+from .losses import BCESoftClDiceLoss
+from .model import C2VLM
 
 
 def parse_args() -> argparse.Namespace:
