@@ -107,7 +107,7 @@ python infer_c2vlm.py \
 | ImageCAS (test partition) | Test | Coronary CTA | [Official repository](https://github.com/XiaoweiXu/ImageCAS-A-Large-Scale-Dataset-and-Benchmark-for-Coronary-Artery-Segmentation-based-on-CT) |
 | ASOCA | Test | Coronary CTA | [Challenge portal](https://asoca.grand-challenge.org/) |
 | C2-SegDB-CBV | External validation | TOF-MRA | [Hugging Face](https://huggingface.co/datasets/lixiangcog/C2-SegDB) |
-| C2-SegDB-CV | External validation | Coronary CTA | Not publicly released because of data-sharing constraints |
+| C2-SegDB-CV | External validation | Coronary CTA | Not publicly released because of data-sharing constraints (You can contact us to obtain it) |
 
 Access to some challenge datasets requires registration and acceptance of the provider's terms.
 
